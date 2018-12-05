@@ -68,6 +68,7 @@ public class MemoAdapter extends BaseAdapter {
         }
 
         Memo memo=(Memo)getItem(position);
+        holder.tvId.setText(memo.get_id());
         holder.tvName.setText(memo.getMname()+"");
         holder.tvCon.setText(memo.getCon()+"");
 

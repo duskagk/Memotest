@@ -3,8 +3,10 @@ package com.example.duskagk.memotest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.hardware.ConsumerIrManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -20,6 +22,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.text.TextUtils;
+import android.util.JsonReader;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -30,9 +33,30 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.example.duskagk.memotest.NetworkTask;
+import com.example.duskagk.memotest.R;
+import com.example.duskagk.memotest.signup;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+
+import javax.net.ssl.HttpsURLConnection;
+
 
 import static android.Manifest.permission.READ_CONTACTS;
 
@@ -41,6 +65,8 @@ import static android.Manifest.permission.READ_CONTACTS;
  */
 public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<Cursor> {
 
+//    INodeJS myAPI;
+//    CompositeDisposable compositeDisposable = new CompositeDisposable();
     /**
      * Id to identity READ_CONTACTS permission request.
      */
@@ -64,13 +90,21 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private View mProgressView;
     private View mLoginFormView;
 
+    JSONObject val = new JSONObject();
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+
+
+
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
+
 
         mPasswordView = (EditText) findViewById(R.id.password);
         mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
@@ -85,26 +119,74 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         });
 
 
-        Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
+        final Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
+        Button signb = (Button) findViewById(R.id.sign);
+
         mEmailSignInButton.setOnClickListener(new OnClickListener() {
+            private static final String TAG = "text";
+
             @Override
             public void onClick(View view) {
+                JSONObject values = new JSONObject();
+                String sql = "SElect * from user_table where id='"+mEmailView.getText().toString()
+                        +"' and password='"+mPasswordView.getText().toString()+"';";
+                try {
+                    values.put("sql", sql);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+
+
+                NetworkTask networkTask = new NetworkTask("https://che5uuetmi.execute-api.ap-northeast-2.amazonaws.com/test/register", values, "POST");
+                try {
+                    String result=networkTask.execute().get();
+
+
+                    JSONArray jsonArray = new JSONArray(result);
+                    for(int i = 0; i< jsonArray.length(); i++){
+                        JSONObject jsonObj = jsonArray.getJSONObject(i);
+
+
+                        String tmpAnswer=new String();
+                        if (jsonObj.get("id").toString().length() > 0)
+                            tmpAnswer=jsonObj.get("id").toString();
+
+                    }
+
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
                 attemptLogin();
             }
         });
-        final Button signup=(Button)findViewById(R.id.sign);
-        signup.setOnClickListener(new OnClickListener() {
+        signb.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent=new Intent(getApplicationContext(),signup.class);
+                Intent intent = new Intent(getApplicationContext(), signup.class);
                 startActivity(intent);
             }
         });
 
-
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = findViewById(R.id.login_progress);
     }
+
+
+    public class JSONTask extends AsyncTask<String, Void, String> {
+        private static final String TAG = "transform error";
+
+        @Override
+        protected String doInBackground(String... strings) {
+            return null;
+        }
+    }
+
 
     private void populateAutoComplete() {
         if (!mayRequestContacts()) {
@@ -113,6 +195,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
         getLoaderManager().initLoader(0, null, this);
     }
+
+
 
     private boolean mayRequestContacts() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {

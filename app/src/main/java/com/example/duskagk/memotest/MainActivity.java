@@ -8,6 +8,7 @@ import android.support.design.widget.Snackbar;
 import android.app.AlertDialog;
 
 import android.view.LayoutInflater;
+import android.view.Surface;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -38,13 +39,20 @@ public class MainActivity extends AppCompatActivity
     ExpandableListView expListView;
     List<String> listDataHeader;
     HashMap<String, List<String>> listDataChild;
+    int flag;
 
+    String dataBaseName = "memo";
 
     Memo memo;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+//데이터베이스 생성
+        dbHelper=new DBhelper(
+                getApplicationContext(), dataBaseName,null,1);
+        dbHelper.testDB();
+        ////
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -66,34 +74,34 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        Button w_memo=(Button)findViewById(R.id.w_memo);
-        w_memo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                AlertDialog.Builder mBulid = new AlertDialog.Builder(v.getContext());
-                LayoutInflater inf = (LayoutInflater) v.getContext().getSystemService(v.getContext().LAYOUT_INFLATER_SERVICE);
-                final View mv = inf.inflate(R.layout.memo_d, null);
-
-                Button btcat=(Button)mv.findViewById(R.id.cat);
-                Button btcan=(Button)findViewById(R.id.can);
-
-                btcat.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        EditText ed=(EditText)mv.findViewById(R.id.category);
-                        if(ed.getAccessibilityClassName().toString().length()>0){
-                            dbHelper=new DBhelper(
-                                    getApplicationContext(),ed.getAccessibilityClassName().toString(),null,1);
-                            dbHelper.testDB();
-                        }
-                    }
-                });
-
-                mBulid.setView(mv);
-                AlertDialog dialog = mBulid.create();
-                dialog.show();
-            }
-        });
+//        Button w_memo=(Button)findViewById(R.id.w_memo);   //
+//        w_memo.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                AlertDialog.Builder mBulid = new AlertDialog.Builder(v.getContext());
+//                LayoutInflater inf = (LayoutInflater) v.getContext().getSystemService(v.getContext().LAYOUT_INFLATER_SERVICE);
+//                final View mv = inf.inflate(R.layout.memo_d, null);
+//
+//                Button btcat=(Button)mv.findViewById(R.id.cat);
+//                Button btcan=(Button)findViewById(R.id.can);
+//
+//                btcat.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        EditText ed=(EditText)mv.findViewById(R.id.category);
+//                        if(ed.getAccessibilityClassName().toString().length()>0){
+//                            dbHelper=new DBhelper(
+//                                    getApplicationContext(), dataBaseName,null,1);
+//                            dbHelper.testDB();
+//                        }
+//                    }
+//                });
+//
+//                mBulid.setView(mv);
+//                AlertDialog dialog = mBulid.create();
+//                dialog.show();
+//            }
+//        });
 
         Button inbtn=(Button)findViewById(R.id.insert);
         inbtn.setOnClickListener(new View.OnClickListener() {
@@ -102,110 +110,101 @@ public class MainActivity extends AppCompatActivity
                 AlertDialog.Builder mBulid = new AlertDialog.Builder(v.getContext());
                 LayoutInflater inf = (LayoutInflater) v.getContext().getSystemService(v.getContext().LAYOUT_INFLATER_SERVICE);
                 final View mv = inf.inflate(R.layout.add_data, null);
-
                 Button savbtn=(Button)mv.findViewById(R.id.save);
-                final EditText edname=(EditText)mv.findViewById(R.id.edname);
-                final EditText edcon=(EditText)mv.findViewById(R.id.edcon);
                 savbtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
+                        EditText edname=(EditText)mv.findViewById(R.id.edname);
+                        EditText edcon=(EditText)mv.findViewById(R.id.edcon);
                         String name=edname.getText().toString();
                         String con=edcon.getText().toString();
                         if(dbHelper==null){
-                            dbHelper=new DBhelper(getApplicationContext(),"TEST",null,1);
-
+                            dbHelper=new DBhelper(getApplicationContext(),dataBaseName,null,1);
                         }
                         Memo memo=new Memo();
                         memo.setMname(name);
                         memo.setMcon(con);
-
                         dbHelper.addMemo(memo);
-
+                        prepareListData();
                     }
                 });
-
-
                 mBulid.setView(mv);
                 AlertDialog dialog = mBulid.create();
                 dialog.show();
-
             }
         });
 
+//        final ListView memolist=(ListView)findViewById(R.id.memolist);
+//        Button loadmemo=(Button)findViewById(R.id.load);
+//        loadmemo.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                memolist.setVisibility(View.VISIBLE);
+//
+//                if(dbHelper==null){
+//                    dbHelper=new DBhelper(getApplicationContext(),"TEST",null,1);
+//                }
+//
+//                List conte=dbHelper.getMemo();
+//                memolist.setAdapter(new MemoAdapter(conte,getApplicationContext()));
+//            }
+//        });
 
-        Button loadmemo=(Button)findViewById(R.id.load);
-        loadmemo.setOnClickListener(new View.OnClickListener() {
+
+
+
+
+
+
+        expListView = (ExpandableListView)findViewById(R.id.lvExp);
+        prepareListData();
+        listAdapter = new ExListAdapter(getApplicationContext(), listDataHeader, listDataChild);
+        expListView.setAdapter(listAdapter);
+
+        expListView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
             @Override
-            public void onClick(View v) {
-                ListView memolist=(ListView)findViewById(R.id.memolist);
-                memolist.setVisibility(View.VISIBLE);
+            public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+                Toast.makeText(v.getContext(),
+                        "Group Clicked " + listDataHeader.get(groupPosition),
+                        Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
+        expListView.setOnGroupExpandListener(new ExpandableListView.OnGroupExpandListener() {
+            @Override
+            public void onGroupExpand(int groupPosition) {
 
-                if(dbHelper==null){
-                    dbHelper=new DBhelper(MainActivity.this,"TEST",null,1);
-                }
+                // Collapse the expanded group
+                Toast.makeText(getApplicationContext(), listDataHeader.get(groupPosition)
+                        + "Exapand", Toast.LENGTH_SHORT).show();
 
-                List conte=dbHelper.getMemo();
-                memolist.setAdapter(new MemoAdapter(conte,MainActivity.this));
             }
         });
 
+        expListView.setOnGroupCollapseListener(new ExpandableListView.OnGroupCollapseListener() {
 
+            @Override
+            public void onGroupCollapse(int groupPosition) {
+                Toast.makeText(getApplicationContext(),
+                        listDataHeader.get(groupPosition) + " Collapsed",
+                        Toast.LENGTH_SHORT).show();
 
-
-
-
-
-//        LayoutInflater inf = (LayoutInflater) getApplicationContext().getSystemService(getApplicationContext().LAYOUT_INFLATER_SERVICE);
-
-//        expListView = (ExpandableListView)findViewById(R.id.lvExp);
-//        prepareListData();
-//        listAdapter = new ExListAdapter(getApplicationContext(), listDataHeader, listDataChild);
-//        expListView.setAdapter(listAdapter);
-//
-//        expListView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
-//            @Override
-//            public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
-//                Toast.makeText(v.getContext(),
-//                        "Group Clicked " + listDataHeader.get(groupPosition),
-//                        Toast.LENGTH_SHORT).show();
-//                return false;
-//            }
-//        });
-//        expListView.setOnGroupExpandListener(new ExpandableListView.OnGroupExpandListener() {
-//            @Override
-//            public void onGroupExpand(int groupPosition) {
-//
-//                // Collapse the expanded group
-//                Toast.makeText(getApplicationContext(), listDataHeader.get(groupPosition)
-//                        + "Exapand", Toast.LENGTH_SHORT).show();
-//
-//            }
-//        });
-//
-//        expListView.setOnGroupCollapseListener(new ExpandableListView.OnGroupCollapseListener() {
-//
-//            @Override
-//            public void onGroupCollapse(int groupPosition) {
-//                Toast.makeText(getApplicationContext(),
-//                        listDataHeader.get(groupPosition) + " Collapsed",
-//                        Toast.LENGTH_SHORT).show();
-//
-//            }
-//        });
-//        expListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
-//            @Override
-//            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-//                Toast.makeText(
-//                        v.getContext(),
-//                        listDataHeader.get(groupPosition)
-//                                + " : "
-//                                + listDataChild.get(
-//                                listDataHeader.get(groupPosition)).get(
-//                                childPosition), Toast.LENGTH_SHORT)
-//                        .show();
-//                return false;
-//            }
-//        });
+            }
+        });
+        expListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+            @Override
+            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+                Toast.makeText(
+                        v.getContext(),
+                        listDataHeader.get(groupPosition)
+                                + " : "
+                                + listDataChild.get(
+                                listDataHeader.get(groupPosition)).get(
+                                childPosition), Toast.LENGTH_SHORT)
+                        .show();
+                return false;
+            }
+        });
 
     }
 
@@ -214,21 +213,29 @@ public class MainActivity extends AppCompatActivity
         listDataHeader = new ArrayList<String>();
         listDataChild = new HashMap<String, List<String>>();
 
-
-        for (int i = 0; i <= 10; i++) {
-
+        DBhelper dbg=new DBhelper(getApplicationContext(),dataBaseName,null,1);
+        List memoList=dbg.getMemo();
+        Memo memo;
+        for(int i=0;i<memoList.size();i++){
+            memo = (Memo)memoList.get(i);
             listDataHeader.add(memo.getMname());
 
-            // Adding child data
-            List<String> child = new ArrayList<String>();
-            child.add(memo.getMname());
-
-            listDataChild.put(listDataHeader.get(i), child); // Header, Child data
-
+            List<String> child=new ArrayList<String>();
+            child.add(memo.getCon());
+            listDataChild.put(listDataHeader.get(i),child);
         }
 
-    }
+//        for (int i = 0; i <= 10; i++) {
+//            listDataHeader.add("head" + i);
+//
+//            // Adding child data
+//            List<String> child = new ArrayList<String>();
+//            child.add("Child" + i);
+//            listDataChild.put(listDataHeader.get(i), child); // Header, Child data
+//
+//        }
 
+    }
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -269,7 +276,7 @@ public class MainActivity extends AppCompatActivity
 
         if (id == R.id.nav_camera) {
             // Handle the camera action
-            Intent intent=new Intent(MainActivity.this,LoginActivity.class);
+            Intent intent=new Intent(MainActivity.this, LoginActivity.class);
             startActivity(intent);
 
         } else if (id == R.id.nav_gallery) {

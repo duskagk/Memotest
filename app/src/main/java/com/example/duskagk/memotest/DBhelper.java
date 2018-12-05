@@ -64,7 +64,7 @@ public class DBhelper extends SQLiteOpenHelper {
 
     public List getMemo(){
         StringBuffer sb= new StringBuffer();
-        sb.append("SESELECT NAME, content FROM TEST_TABLE " );
+        sb.append("SELECT NAME, content FROM TEST_TABLE " );
 
         SQLiteDatabase db= getReadableDatabase();
         Cursor cursor=db.rawQuery(sb.toString(),null);
@@ -74,8 +74,8 @@ public class DBhelper extends SQLiteOpenHelper {
 
         while(cursor.moveToNext()){
             memo=new Memo();
-            memo.setMname(cursor.getString(1));
-            memo.setMcon(cursor.getString(2));
+            memo.setMname(cursor.getString(0));
+            memo.setMcon(cursor.getString(1));
             conte.add(memo);
         }
         return conte;
